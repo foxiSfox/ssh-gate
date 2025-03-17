@@ -10,8 +10,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/mattn/go-sqlite3"
 
-	"hello-world/db"
-	"hello-world/handlers"
+	"ssh-gate/db"
+	"ssh-gate/handlers"
 )
 
 const dbPath = "./users.db"

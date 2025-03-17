@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"hello-world/models"
+	"ssh-gate/models"
 
 	"github.com/go-chi/chi/v5"
 )

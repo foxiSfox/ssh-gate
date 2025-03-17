@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"hello-world/models"
+	"ssh-gate/models"
 
 	_ "github.com/mattn/go-sqlite3"
 )
