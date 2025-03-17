@@ -34,6 +34,9 @@ func main() {
 	// Обработчики пользователей
 	userHandler := handlers.NewUserHandler(database)
 
+	// Обработчики серверов
+	serverHandler := handlers.NewServerHandler(database)
+
 	// Маршруты
 	r.Get("/hello", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -45,6 +48,20 @@ func main() {
 		r.Post("/", userHandler.CreateUser) // Создание пользователя
 		r.Get("/", userHandler.GetAllUsers) // Получение всех пользователей
 		r.Get("/{id}", userHandler.GetUser) // Получение пользователя по ID
+	})
+
+	// API для серверов
+	r.Route("/api/servers", func(r chi.Router) {
+		r.Post("/", serverHandler.CreateServer) // Создание сервера
+		r.Get("/", serverHandler.GetAllServers) // Получение всех серверов
+		r.Get("/{id}", serverHandler.GetServer) // Получение сервера по ID
+	})
+
+	// API для управления доступом пользователей к серверам
+	r.Route("/api/users/{userId}/servers", func(r chi.Router) {
+		r.Get("/", serverHandler.GetUserServers)                    // Получение всех серверов пользователя
+		r.Post("/{serverId}", serverHandler.AssignServerToUser)     // Привязка сервера к пользователю
+		r.Delete("/{serverId}", serverHandler.RemoveServerFromUser) // Удаление привязки сервера к пользователю
 	})
 
 	// Запуск сервера

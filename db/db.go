@@ -27,6 +27,12 @@ func InitDB(dataSourceName string) (*sql.DB, error) {
 		return db, err
 	}
 
+	// Создаем таблицу серверов и связующую таблицу
+	if err := models.CreateServerTable(db); err != nil {
+		log.Printf("Ошибка при создании таблицы серверов: %v", err)
+		return db, err
+	}
+
 	log.Println("База данных успешно инициализирована")
 	return db, nil
 }
