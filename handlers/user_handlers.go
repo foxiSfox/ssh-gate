@@ -29,8 +29,13 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if user.Name == "" || user.PublicKey == "" {
-		http.Error(w, "Имя и публичный ключ обязательны", http.StatusBadRequest)
+	if user.Username == "" {
+		http.Error(w, "Имя пользователя обязательно", http.StatusBadRequest)
+		return
+	}
+
+	if user.PublicKey == "" {
+		http.Error(w, "Публичный ключ обязателен", http.StatusBadRequest)
 		return
 	}
 

@@ -8,8 +8,8 @@ import (
 // User представляет модель пользователя
 type User struct {
 	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	PublicKey string `json:"publicKey"`
+	Username  string `json:"username"`
+	PublicKey string `json:"public_key"`
 }
 
 // CreateUserTable создает таблицу пользователей, если она не существует
@@ -17,7 +17,7 @@ func CreateUserTable(db *sql.DB) error {
 	query := `
 	CREATE TABLE IF NOT EXISTS users (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT NOT NULL,
+		username TEXT NOT NULL UNIQUE,
 		public_key TEXT NOT NULL
 	);
 	`
@@ -33,11 +33,11 @@ func CreateUserTable(db *sql.DB) error {
 // AddUser добавляет нового пользователя в базу данных
 func AddUser(db *sql.DB, user User) (int64, error) {
 	query := `
-	INSERT INTO users (name, public_key)
+	INSERT INTO users (username, public_key)
 	VALUES (?, ?);
 	`
 
-	result, err := db.Exec(query, user.Name, user.PublicKey)
+	result, err := db.Exec(query, user.Username, user.PublicKey)
 	if err != nil {
 		return 0, fmt.Errorf("ошибка добавления пользователя: %w", err)
 	}
@@ -51,20 +51,20 @@ func AddUser(db *sql.DB, user User) (int64, error) {
 }
 
 // GetUserByID получает пользователя по ID
-func GetUserByID(db *sql.DB, id int64) (User, error) {
+func GetUserByID(db *sql.DB, id int64) (*User, error) {
+	user := &User{}
 	query := `
-	SELECT id, name, public_key
+	SELECT id, username, public_key
 	FROM users
 	WHERE id = ?;
 	`
 
-	var user User
-	err := db.QueryRow(query, id).Scan(&user.ID, &user.Name, &user.PublicKey)
+	err := db.QueryRow(query, id).Scan(&user.ID, &user.Username, &user.PublicKey)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return User{}, fmt.Errorf("пользователь с ID %d не найден", id)
+			return nil, fmt.Errorf("пользователь с ID %d не найден", id)
 		}
-		return User{}, fmt.Errorf("ошибка получения пользователя: %w", err)
+		return nil, fmt.Errorf("ошибка получения пользователя: %w", err)
 	}
 
 	return user, nil
@@ -73,7 +73,7 @@ func GetUserByID(db *sql.DB, id int64) (User, error) {
 // GetAllUsers получает всех пользователей
 func GetAllUsers(db *sql.DB) ([]User, error) {
 	query := `
-	SELECT id, name, public_key
+	SELECT id, username, public_key
 	FROM users;
 	`
 
@@ -86,7 +86,7 @@ func GetAllUsers(db *sql.DB) ([]User, error) {
 	var users []User
 	for rows.Next() {
 		var user User
-		if err := rows.Scan(&user.ID, &user.Name, &user.PublicKey); err != nil {
+		if err := rows.Scan(&user.ID, &user.Username, &user.PublicKey); err != nil {
 			return nil, fmt.Errorf("ошибка чтения данных пользователя: %w", err)
 		}
 		users = append(users, user)

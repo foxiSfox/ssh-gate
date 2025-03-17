@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"ssh-gate/models"
+	"ssh-gate/ssh"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -94,8 +95,45 @@ func (h *ServerHandler) AssignServerToUser(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Получаем информацию о пользователе
+	user, err := models.GetUserByID(h.DB, userID)
+	if err != nil {
+		http.Error(w, "Пользователь не найден: "+err.Error(), http.StatusNotFound)
+		return
+	}
+
+	// Получаем информацию о сервере
+	server, err := models.GetServerByID(h.DB, serverID)
+	if err != nil {
+		http.Error(w, "Сервер не найден: "+err.Error(), http.StatusNotFound)
+		return
+	}
+
+	// Проверяем корректность публичного ключа
+	if err := ssh.ValidatePublicKey(user.PublicKey); err != nil {
+		http.Error(w, "Неверный формат публичного ключа: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Создаем конфигурацию для SSH-подключения
+	sshConfig := ssh.SSHConfig{
+		Host:     server.IP,
+		Port:     22,                   // Стандартный порт SSH
+		Username: "root",               // Имя пользователя для подключения к серверу
+		Password: "your-root-password", // Пароль для подключения к серверу
+	}
+
+	// Добавляем публичный ключ на сервер
+	if err := ssh.AddAuthorizedKey(sshConfig, user.PublicKey); err != nil {
+		http.Error(w, "Ошибка при добавлении ключа на сервер: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Привязываем сервер к пользователю в базе данных
 	err = models.AssignServerToUser(h.DB, userID, serverID)
 	if err != nil {
+		// Если не удалось привязать сервер к пользователю, удаляем ключ с сервера
+		_ = ssh.RemoveAuthorizedKey(sshConfig, user.PublicKey)
 		http.Error(w, "Ошибка при привязке сервера: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -139,6 +177,35 @@ func (h *ServerHandler) RemoveServerFromUser(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Получаем информацию о пользователе
+	user, err := models.GetUserByID(h.DB, userID)
+	if err != nil {
+		http.Error(w, "Пользователь не найден: "+err.Error(), http.StatusNotFound)
+		return
+	}
+
+	// Получаем информацию о сервере
+	server, err := models.GetServerByID(h.DB, serverID)
+	if err != nil {
+		http.Error(w, "Сервер не найден: "+err.Error(), http.StatusNotFound)
+		return
+	}
+
+	// Создаем конфигурацию для SSH-подключения
+	sshConfig := ssh.SSHConfig{
+		Host:     server.IP,
+		Port:     22,                   // Стандартный порт SSH
+		Username: "root",               // Имя пользователя для подключения к серверу
+		Password: "your-root-password", // Пароль для подключения к серверу
+	}
+
+	// Удаляем публичный ключ с сервера
+	if err := ssh.RemoveAuthorizedKey(sshConfig, user.PublicKey); err != nil {
+		http.Error(w, "Ошибка при удалении ключа с сервера: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Удаляем привязку сервера к пользователю в базе данных
 	err = models.RemoveServerFromUser(h.DB, userID, serverID)
 	if err != nil {
 		http.Error(w, "Ошибка при удалении привязки сервера: "+err.Error(), http.StatusInternalServerError)
