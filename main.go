@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -14,62 +13,60 @@ import (
 	"ssh-gate/handlers"
 )
 
-const dbPath = "./users.db"
-
 func main() {
-	// Инициализация базы данных
-	database, err := db.InitDB(dbPath)
+	// Инициализируем базу данных
+
+	database, err := db.InitDB("users.db")
 	if err != nil {
-		log.Fatalf("Ошибка инициализации базы данных: %v", err)
+		log.Fatal("Ошибка инициализации базы данных:", err)
 	}
 	defer database.Close()
 
-	// Создание роутера
+	// Получаем путь к приватному ключу из переменной окружения
+	os.Setenv("SSH_PRIVATE_KEY_PATH", "id_rsa_jump_server")
+	keyPath := os.Getenv("SSH_PRIVATE_KEY_PATH")
+	if keyPath == "" {
+		log.Fatal("Не указан путь к приватному ключу (SSH_PRIVATE_KEY_PATH)")
+	}
+
+	// Создаем обработчики
+	userHandler := handlers.NewUserHandler(database)
+	serverHandler := handlers.NewServerHandler(database, keyPath)
+
+	// Создаем роутер
 	r := chi.NewRouter()
 
-	// Middleware
+	// Добавляем middleware
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	// Обработчики пользователей
-	userHandler := handlers.NewUserHandler(database)
+	// Определяем маршруты
+	r.Route("/api", func(r chi.Router) {
+		// Маршруты для пользователей
+		r.Route("/users", func(r chi.Router) {
+			r.Post("/", userHandler.CreateUser)
+			r.Get("/", userHandler.GetAllUsers)
+			r.Get("/{id}", userHandler.GetUser)
+		})
 
-	// Обработчики серверов
-	serverHandler := handlers.NewServerHandler(database)
+		// Маршруты для серверов
+		r.Route("/servers", func(r chi.Router) {
+			r.Post("/", serverHandler.CreateServer)
+			r.Get("/", serverHandler.GetAllServers)
+			r.Get("/{id}", serverHandler.GetServer)
+		})
 
-	// Маршруты
-	r.Get("/hello", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"message": "Hello, World!"}`))
+		// Маршруты для управления доступом пользователей к серверам
+		r.Route("/users/{userId}/servers", func(r chi.Router) {
+			r.Get("/", serverHandler.GetUserServers)
+			r.Post("/{serverId}", serverHandler.AssignServerToUser)
+			r.Delete("/{serverId}", serverHandler.RemoveServerFromUser)
+		})
 	})
 
-	// API для пользователей
-	r.Route("/api/users", func(r chi.Router) {
-		r.Post("/", userHandler.CreateUser) // Создание пользователя
-		r.Get("/", userHandler.GetAllUsers) // Получение всех пользователей
-		r.Get("/{id}", userHandler.GetUser) // Получение пользователя по ID
-	})
-
-	// API для серверов
-	r.Route("/api/servers", func(r chi.Router) {
-		r.Post("/", serverHandler.CreateServer) // Создание сервера
-		r.Get("/", serverHandler.GetAllServers) // Получение всех серверов
-		r.Get("/{id}", serverHandler.GetServer) // Получение сервера по ID
-	})
-
-	// API для управления доступом пользователей к серверам
-	r.Route("/api/users/{userId}/servers", func(r chi.Router) {
-		r.Get("/", serverHandler.GetUserServers)                    // Получение всех серверов пользователя
-		r.Post("/{serverId}", serverHandler.AssignServerToUser)     // Привязка сервера к пользователю
-		r.Delete("/{serverId}", serverHandler.RemoveServerFromUser) // Удаление привязки сервера к пользователю
-	})
-
-	// Запуск сервера
-	port := ":8080"
-	fmt.Printf("Сервер запущен на http://localhost%s\n", port)
-
-	if err := http.ListenAndServe(port, r); err != nil {
-		log.Fatalf("Ошибка запуска сервера: %v", err)
-		os.Exit(1)
+	// Запускаем сервер
+	log.Println("Сервер запущен на порту :8080")
+	if err := http.ListenAndServe(":8080", r); err != nil {
+		log.Fatal("Ошибка запуска сервера:", err)
 	}
 }

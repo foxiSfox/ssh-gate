@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"os"
 	"strconv"
 
 	"ssh-gate/models"
@@ -14,12 +15,16 @@ import (
 
 // ServerHandler содержит обработчики для API серверов
 type ServerHandler struct {
-	DB *sql.DB
+	DB      *sql.DB
+	KeyPath string // Путь к приватному ключу для подключения к серверам
 }
 
 // NewServerHandler создает новый экземпляр ServerHandler
-func NewServerHandler(db *sql.DB) *ServerHandler {
-	return &ServerHandler{DB: db}
+func NewServerHandler(db *sql.DB, keyPath string) *ServerHandler {
+	return &ServerHandler{
+		DB:      db,
+		KeyPath: keyPath,
+	}
 }
 
 // CreateServer обрабатывает запрос на создание нового сервера
@@ -115,12 +120,19 @@ func (h *ServerHandler) AssignServerToUser(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Читаем приватный ключ
+	keyData, err := os.ReadFile(h.KeyPath)
+	if err != nil {
+		http.Error(w, "Ошибка чтения приватного ключа: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Создаем конфигурацию для SSH-подключения
 	sshConfig := ssh.SSHConfig{
-		Host:     server.IP,
-		Port:     22,                   // Стандартный порт SSH
-		Username: "root",               // Имя пользователя для подключения к серверу
-		Password: "your-root-password", // Пароль для подключения к серверу
+		Host:    server.IP,
+		Port:    22, // Стандартный порт SSH
+		User:    "deploy",
+		KeyPath: string(keyData),
 	}
 
 	// Добавляем публичный ключ на сервер
@@ -191,12 +203,19 @@ func (h *ServerHandler) RemoveServerFromUser(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Читаем приватный ключ
+	keyData, err := os.ReadFile(h.KeyPath)
+	if err != nil {
+		http.Error(w, "Ошибка чтения приватного ключа: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Создаем конфигурацию для SSH-подключения
 	sshConfig := ssh.SSHConfig{
-		Host:     server.IP,
-		Port:     22,                   // Стандартный порт SSH
-		Username: "root",               // Имя пользователя для подключения к серверу
-		Password: "your-root-password", // Пароль для подключения к серверу
+		Host:    server.IP,
+		Port:    22, // Стандартный порт SSH
+		User:    "deploy",
+		KeyPath: string(keyData),
 	}
 
 	// Удаляем публичный ключ с сервера
