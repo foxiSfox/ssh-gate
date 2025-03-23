@@ -40,22 +40,15 @@ func AddAuthorizedKey(config SSHConfig, publicKey string) error {
 	}
 	defer session.Close()
 
-	// Проверяем существование директории .ssh
-	checkDirCmd := "mkdir -p ~/.ssh && chmod 700 ~/.ssh"
-	if err := session.Run(checkDirCmd); err != nil {
-		return fmt.Errorf("ошибка создания директории .ssh: %w", err)
-	}
+	// Добавление ключа на сервер
+	cmd := fmt.Sprintf(`
+		mkdir -p ~/.ssh && chmod 700 ~/.ssh &&
+		touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys &&
+		echo '%s' >> ~/.ssh/authorized_keys
+	`, publicKey)
 
-	// Проверяем существование файла authorized_keys
-	checkFileCmd := "touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
-	if err := session.Run(checkFileCmd); err != nil {
-		return fmt.Errorf("ошибка создания файла authorized_keys: %w", err)
-	}
-
-	// Добавляем ключ в authorized_keys
-	addKeyCmd := fmt.Sprintf("echo '%s' >> ~/.ssh/authorized_keys", publicKey)
-	if err := session.Run(addKeyCmd); err != nil {
-		return fmt.Errorf("ошибка добавления ключа: %w", err)
+	if err := session.Run(cmd); err != nil {
+		return fmt.Errorf("ошибка выполнения команды: %w", err)
 	}
 
 	return nil
