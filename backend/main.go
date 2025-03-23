@@ -8,7 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/mattn/go-sqlite3"
-
+	"github.com/rs/cors"
 	"ssh-gate/db"
 	"ssh-gate/handlers"
 )
@@ -39,7 +39,7 @@ func main() {
 	// Добавляем middleware
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-
+	r.Use(cors.AllowAll().Handler)
 	// Определяем маршруты
 	r.Route("/api", func(r chi.Router) {
 		// Маршруты для пользователей
