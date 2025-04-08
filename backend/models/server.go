@@ -183,3 +183,27 @@ func RemoveServerFromUser(db *sql.DB, userID, serverID int64) error {
 
 	return nil
 }
+
+// DeleteServer удаляет сервер по ID
+func DeleteServer(db *sql.DB, id int64) error {
+	query := `
+	DELETE FROM servers
+	WHERE id = ?;
+	`
+
+	result, err := db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("ошибка удаления сервера: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("ошибка получения количества затронутых строк: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("сервер с ID %d не найден", id)
+	}
+
+	return nil
+}

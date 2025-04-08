@@ -55,6 +55,7 @@ func main() {
 			r.Post("/", serverHandler.CreateServer)
 			r.Get("/", serverHandler.GetAllServers)
 			r.Get("/{id}", serverHandler.GetServer)
+			r.Delete("/{id}", serverHandler.DeleteServer)
 		})
 
 		// Маршруты для управления доступом пользователей к серверам

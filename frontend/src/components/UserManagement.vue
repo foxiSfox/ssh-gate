@@ -120,7 +120,7 @@ const addUser = async () => {
 // Удаление пользователя
 const deleteUser = async (id: number) => {
   if (!confirm('Вы уверены, что хотите удалить этого пользователя?')) return
-  
+
   try {
     const response = await fetch(`http://localhost:8080/api/users/${id}`, {
       method: 'DELETE'
@@ -173,10 +173,11 @@ onMounted(() => {
   color: #666;
   font-size: 0.875rem;
   margin: 0.25rem 0 0;
+  word-break: break-all;
 }
 
 .list-item-actions {
   display: flex;
   gap: 0.5rem;
 }
-</style> 
+</style>

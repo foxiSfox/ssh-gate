@@ -233,3 +233,22 @@ func (h *ServerHandler) RemoveServerFromUser(w http.ResponseWriter, r *http.Requ
 
 	w.WriteHeader(http.StatusOK)
 }
+
+// DeleteServer обрабатывает запрос на удаление сервера по ID
+func (h *ServerHandler) DeleteServer(w http.ResponseWriter, r *http.Request) {
+	// todo нужно отозвать доступы у вех пользователей
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Неверный формат ID", http.StatusBadRequest)
+		return
+	}
+
+	err = models.DeleteServer(h.DB, id)
+	if err != nil {
+		http.Error(w, "Ошибка при удалении сервера: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
