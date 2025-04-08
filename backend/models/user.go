@@ -98,3 +98,18 @@ func GetAllUsers(db *sql.DB) ([]User, error) {
 
 	return users, nil
 }
+
+// DeleteUser удаление пользователя
+func DeleteUser(db *sql.DB, id int64) error {
+	query := `
+	DELETE FROM users
+	WHERE id = ?;
+	`
+
+	_, err := db.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("ошибка удаления пользователя: %w", err)
+	}
+
+	return nil
+}

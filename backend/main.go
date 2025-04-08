@@ -47,6 +47,7 @@ func main() {
 			r.Post("/", userHandler.CreateUser)
 			r.Get("/", userHandler.GetAllUsers)
 			r.Get("/{id}", userHandler.GetUser)
+			r.Delete("/{id}", userHandler.DeleteUser)
 		})
 
 		// Маршруты для серверов
