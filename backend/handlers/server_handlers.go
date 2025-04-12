@@ -85,6 +85,13 @@ func (h *ServerHandler) GetAllServers(w http.ResponseWriter, r *http.Request) {
 
 // AssignServerToUser обрабатывает запрос на привязку сервера к пользователю
 func (h *ServerHandler) AssignServerToUser(w http.ResponseWriter, r *http.Request) {
+	// Читаем приватный ключ
+	keyData, err := os.ReadFile(h.KeyPath)
+	if err != nil {
+		http.Error(w, "Ошибка чтения приватного ключа: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	userIDStr := chi.URLParam(r, "userId")
 	serverIDStr := chi.URLParam(r, "serverId")
 
@@ -120,22 +127,15 @@ func (h *ServerHandler) AssignServerToUser(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Читаем приватный ключ
-	keyData, err := os.ReadFile(h.KeyPath)
-	if err != nil {
-		http.Error(w, "Ошибка чтения приватного ключа: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	// Создаем конфигурацию для SSH-подключения
 	sshConfig := ssh.SSHConfig{
 		Host:    server.IP,
-		Port:    22, // Стандартный порт SSH
-		User:    "deploy",
+		Port:    22,       // todo надо вынести
+		User:    "deploy", //todo тут все надо выносить
 		KeyPath: string(keyData),
 	}
 
-	// Добавляем публичный ключ на сервер
+	// Добавляем публичный ключ на сервер, к которому надо получить доступ пользователю
 	if err := ssh.AddAuthorizedKey(sshConfig, user.PublicKey); err != nil {
 		http.Error(w, "Ошибка при добавлении ключа на сервер: "+err.Error(), http.StatusInternalServerError)
 		return

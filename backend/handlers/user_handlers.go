@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 
 	"ssh-gate/models"
 
@@ -42,6 +44,20 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	id, err := models.AddUser(h.DB, user)
 	if err != nil {
 		http.Error(w, "Ошибка при добавлении пользователя: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Добавляем публичный ключ локально на jump сервер
+	authorizedKeysFile := "authorized_keys"
+	f, err := os.OpenFile(authorizedKeysFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		http.Error(w, "Ошибка при открытии файла authorized_keys: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+
+	if _, err := f.WriteString(user.PublicKey + "\n"); err != nil {
+		http.Error(w, "Ошибка при записи ключа в файл authorized_keys: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -90,6 +106,40 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Неверный формат ID", http.StatusBadRequest)
 		return
 	}
+
+	/////// Удаление ключа. Начало
+	user, err := models.GetUserByID(h.DB, id)
+	if err != nil {
+		http.Error(w, "Пользователь не найден: "+err.Error(), http.StatusNotFound)
+		return
+	}
+
+	// Читаем файл authorized_keys
+	authorizedKeysFile := "authorized_keys"
+	data, err := os.ReadFile(authorizedKeysFile)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении файла authorized_keys: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Разделяем содержимое файла на строки и удаляем нужную строку
+	lines := strings.Split(string(data), "\n")
+	var updatedKeys []string
+	for _, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
+		if trimmedLine != "" && trimmedLine != strings.TrimSpace(user.PublicKey) {
+			updatedKeys = append(updatedKeys, line)
+		}
+	}
+
+	// Перезаписываем файл authorized_keys
+	err = os.WriteFile(authorizedKeysFile, []byte(strings.Join(updatedKeys, "\n")), 0644)
+	if err != nil {
+		http.Error(w, "Ошибка при записи файла authorized_keys: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	/////// Удаление ключа. Конец
 
 	err = models.DeleteUser(h.DB, id)
 	if err != nil {
