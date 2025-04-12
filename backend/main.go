@@ -66,9 +66,28 @@ func main() {
 		})
 	})
 
+	// Обслуживаем статические файлы фронтенда
+	fileServer(r, "/", http.Dir("./frontend/dist"))
+
 	// Запускаем сервер
 	log.Println("Сервер запущен на порту :8080")
 	if err := http.ListenAndServe(":8080", r); err != nil {
 		log.Fatal("Ошибка запуска сервера:", err)
 	}
+}
+
+// Функция для удобного обслуживания фронтенда и SPA-роутинга (todo временно)
+func fileServer(r chi.Router, path string, root http.FileSystem) {
+	if path != "/" && path[len(path)-1] != '/' {
+		r.Get(path, http.RedirectHandler(path+"/", 301).ServeHTTP)
+		path += "/"
+	}
+	fs := http.StripPrefix(path, http.FileServer(root))
+	r.Get(path+"*", func(w http.ResponseWriter, r *http.Request) {
+		if _, err := root.Open(r.URL.Path); os.IsNotExist(err) {
+			http.ServeFile(w, r, "./frontend/dist/index.html")
+			return
+		}
+		fs.ServeHTTP(w, r)
+	})
 }
