@@ -107,7 +107,7 @@ const addServer = async () => {
 // Удаление сервера
 const deleteServer = async (id: number) => {
   if (!confirm('Вы уверены, что хотите удалить этот сервер?')) return
-  
+
   try {
     const response = await fetch(`http://localhost:8080/api/servers/${id}`, {
       method: 'DELETE'
@@ -160,4 +160,4 @@ onMounted(() => {
   display: flex;
   gap: 0.5rem;
 }
-</style> 
+</style>
