@@ -69,7 +69,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-
+import { fetchApi } from "@/shared/utils.ts";
 interface User {
   id: number
   username: string
@@ -91,7 +91,7 @@ const selectedServer = ref<number | null>(null)
 // Загрузка пользователей
 const fetchUsers = async () => {
   try {
-    const response = await fetch('http://localhost:8080/api/users')
+    const response = await fetchApi('/api/users')
     users.value = await response.json()
     await Promise.all(users.value.map(user => fetchUserServers(user.id)))
   } catch (error) {
@@ -102,7 +102,7 @@ const fetchUsers = async () => {
 // Загрузка серверов
 const fetchServers = async () => {
   try {
-    const response = await fetch('http://localhost:8080/api/servers')
+    const response = await fetchApi('/api/servers')
     servers.value = await response.json()
   } catch (error) {
     console.error('Ошибка при загрузке серверов:', error)
@@ -112,7 +112,7 @@ const fetchServers = async () => {
 // Загрузка серверов пользователя
 const fetchUserServers = async (userId: number) => {
   try {
-    const response = await fetch(`http://localhost:8080/api/users/${userId}/servers`)
+    const response = await fetchApi(`/api/users/${userId}/servers`)
     userServers.value[userId] = await response.json()
   } catch (error) {
     console.error('Ошибка при загрузке серверов пользователя:', error)
@@ -131,8 +131,8 @@ const assignServer = async () => {
   if (!selectedUser.value || !selectedServer.value) return
 
   try {
-    const response = await fetch(
-      `http://localhost:8080/api/users/${selectedUser.value.id}/servers/${selectedServer.value}`,
+    const response = await fetchApi(
+      `/api/users/${selectedUser.value.id}/servers/${selectedServer.value}`,
       {
         method: 'POST'
       }
@@ -152,8 +152,8 @@ const removeServerFromUser = async (userId: number, serverId: number) => {
   if (!confirm('Вы уверены, что хотите удалить доступ к этому серверу?')) return
 
   try {
-    const response = await fetch(
-      `http://localhost:8080/api/users/${userId}/servers/${serverId}`,
+    const response = await fetchApi(
+      `/api/users/${userId}/servers/${serverId}`,
       {
         method: 'DELETE'
       }

@@ -6,7 +6,6 @@
         Добавить пользователя
       </button>
     </div>
-
     <!-- Список пользователей -->
     <div class="list">
       <div v-for="user in users" :key="user.id" class="list-item">
@@ -19,7 +18,7 @@
             <button class="button" @click="viewUserServers(user)">
               Просмотр серверов
             </button>
-            <button class="button button-danger" @click="deleteUser(user.id)">
+            <button class="button button-danger" @click="onUserDelete(user.id)">
               Удалить
             </button>
           </div>
@@ -35,13 +34,13 @@
           <button class="modal-close" @click="showAddUserModal = false">&times;</button>
         </div>
         <div class="modal-body">
-          <form @submit.prevent="addUser">
+          <form @submit.prevent="onUserCreate">
             <div class="form-group">
               <label class="form-label" for="username">Имя пользователя</label>
               <input
                 type="text"
                 id="username"
-                v-model="newUser.username"
+                v-model="user.username"
                 class="form-input"
                 required
               />
@@ -50,7 +49,7 @@
               <label class="form-label" for="publicKey">Публичный ключ</label>
               <textarea
                 id="publicKey"
-                v-model="newUser.public_key"
+                v-model="user.public_key"
                 class="form-input"
                 rows="3"
                 required
@@ -72,7 +71,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
+import { usersFetch, userCreate, userDelete } from '../api';
 
 interface User {
   id: number
@@ -80,67 +81,49 @@ interface User {
   public_key: string
 }
 
-const users = ref<User[]>([])
 const showAddUserModal = ref(false)
-const newUser = ref({
+const user = ref({
   username: '',
   public_key: ''
 })
 
-// Загрузка пользователей
-const fetchUsers = async () => {
-  try {
-    const response = await fetch('http://localhost:8080/api/users')
-    users.value = await response.json()
-  } catch (error) {
-    console.error('Ошибка при загрузке пользователей:', error)
-  }
+const { data: users } = useQuery({
+  queryKey: ['users'],
+  queryFn: usersFetch,
+})
+
+const queryClient = useQueryClient()
+const { mutate: mutateUserCreate } = useMutation({
+  mutationFn: userCreate,
+  onSuccess: () => {
+    showAddUserModal.value = false
+    queryClient.invalidateQueries({ queryKey: ['users'] })
+  },
+})
+
+const onUserCreate = () => {
+  mutateUserCreate(JSON.stringify(user.value))
 }
 
-// Добавление пользователя
-const addUser = async () => {
-  try {
-    const response = await fetch('http://localhost:8080/api/users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(newUser.value)
-    })
-    if (response.ok) {
-      showAddUserModal.value = false
-      newUser.value = { username: '', public_key: '' }
-      await fetchUsers()
-    }
-  } catch (error) {
-    console.error('Ошибка при добавлении пользователя:', error)
+const { mutate: mutateUserDelete } = useMutation({
+  mutationFn: userDelete,
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['users'] })
+  },
+})
+
+const onUserDelete = (id: number) => {
+  if (!confirm('Вы уверены, что хотите удалить этого пользователя?')) {
+    return
   }
+  mutateUserDelete(id)
 }
 
-// Удаление пользователя
-const deleteUser = async (id: number) => {
-  if (!confirm('Вы уверены, что хотите удалить этого пользователя?')) return
-
-  try {
-    const response = await fetch(`http://localhost:8080/api/users/${id}`, {
-      method: 'DELETE'
-    })
-    if (response.ok) {
-      await fetchUsers()
-    }
-  } catch (error) {
-    console.error('Ошибка при удалении пользователя:', error)
-  }
-}
 
 // Просмотр серверов пользователя
 const viewUserServers = (user: User) => {
   // TODO: Реализовать просмотр серверов пользователя
 }
-
-onMounted(() => {
-  fetchUsers()
-})
 </script>
 
 <style scoped>
