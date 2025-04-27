@@ -15,7 +15,7 @@
               <ul>
                 <li v-for="server in userServers[user.id]" :key="server.id" class="server-item">
                   <span>{{ server.ip }}</span>
-                  <button class="button button-danger" @click="removeServerFromUser(user.id, server.id)">
+                  <button class="button button-danger" @click="onRemoveServerFromUser(user.id, server.id)">
                     Удалить доступ
                   </button>
                 </li>
@@ -37,7 +37,7 @@
           <button class="modal-close" @click="showAssignServerModal = false">&times;</button>
         </div>
         <div class="modal-body">
-          <form @submit.prevent="assignServer">
+          <form @submit.prevent="onAssignServer">
             <div class="form-group">
               <label class="form-label" for="server">Выберите сервер</label>
               <select
@@ -68,8 +68,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { fetchApi } from "@/shared/utils.ts";
+import { ref, computed } from 'vue'
+import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/vue-query';
+import { usersFetch, serversFetch, userServersFetch, assignServer, removeServerFromUser } from "../api";
+
 interface User {
   id: number
   username: string
@@ -81,95 +83,91 @@ interface Server {
   ip: string
 }
 
-const users = ref<User[]>([])
-const servers = ref<Server[]>([])
-const userServers = ref<Record<number, Server[]>>({})
 const showAssignServerModal = ref(false)
 const selectedUser = ref<User | null>(null)
-const selectedServer = ref<number | null>(null)
+const selectedServer = defineModel()
 
-// Загрузка пользователей
-const fetchUsers = async () => {
-  try {
-    const response = await fetchApi('/api/users')
-    users.value = await response.json()
-    await Promise.all(users.value.map(user => fetchUserServers(user.id)))
-  } catch (error) {
-    console.error('Ошибка при загрузке пользователей:', error)
+const { data: users } = useQuery({
+  queryKey: ['users'],
+  queryFn: usersFetch,
+})
+
+const { data: servers } = useQuery({
+  queryKey: ['servers'],
+  queryFn: serversFetch,
+})
+
+const userServersQueries = useQueries({
+  queries: computed(() => {
+    return users.value
+      ? users?.value?.map((user: User) => ({
+          queryKey: ['user-servers', user.id],
+          queryFn: () => userServersFetch(user.id),
+        }))
+      : []
+  })
+})
+
+const userServers = computed(() => {
+  const result: Record<number, any> = {}
+  userServersQueries.value.forEach((queryResult, index) => {
+    const user = users.value?.[index]
+    if (user) {
+      result[user.id] = queryResult.data
+    }
+  })
+  return result
+})
+
+const queryClient = useQueryClient()
+const { mutate: mutateAssignServer } = useMutation({
+  mutationFn: assignServer,
+  onSuccess: (_, variables) => {
+    showAssignServerModal.value = false;
+    selectedServer.value = null;
+    queryClient.invalidateQueries({ queryKey: ['user-servers', variables.userId] });
+  },
+})
+
+const onAssignServer = async () => {
+  if (!selectedUser.value || !selectedServer.value) {
+     return
   }
+
+  mutateAssignServer({
+    userId: selectedUser.value.id,
+    serverId: selectedServer.value
+  })
 }
 
-// Загрузка серверов
-const fetchServers = async () => {
-  try {
-    const response = await fetchApi('/api/servers')
-    servers.value = await response.json()
-  } catch (error) {
-    console.error('Ошибка при загрузке серверов:', error)
+const { mutate: mutateRemoveServerFromUser} = useMutation({
+  mutationFn: removeServerFromUser,
+  onSuccess: (_, variables) => {
+    queryClient.invalidateQueries({ queryKey: ['user-servers', variables.userId] })
   }
+})
+
+const onRemoveServerFromUser = async (userId: number, serverId: number) => {
+  if (!confirm('Вы уверены, что хотите удалить доступ к этому серверу?')) {
+    return
+  }
+  mutateRemoveServerFromUser({ userId, serverId })
 }
 
-// Загрузка серверов пользователя
-const fetchUserServers = async (userId: number) => {
-  try {
-    const response = await fetchApi(`/api/users/${userId}/servers`)
-    userServers.value[userId] = await response.json()
-  } catch (error) {
-    console.error('Ошибка при загрузке серверов пользователя:', error)
-  }
-}
-
-// Вычисляемое свойство для доступных серверов
+/**
+ * Получение доступных серверов для пользователя
+ */
 const availableServers = computed(() => {
-  if (!selectedUser.value) return []
-  const userServerIds = new Set(userServers.value[selectedUser.value.id]?.map(s => s.id) || [])
-  return servers.value.filter(server => !userServerIds.has(server.id))
+  if (!selectedUser.value) {
+    return []
+  }
+  const userServerIds = new Set<number>(
+    userServers.value[selectedUser.value.id]?.map((s: Server) => s.id) || []
+  )
+
+  return servers.value.filter((server: Server) => !userServerIds.has(server.id))
 })
 
-// Назначение сервера пользователю
-const assignServer = async () => {
-  if (!selectedUser.value || !selectedServer.value) return
-
-  try {
-    const response = await fetchApi(
-      `/api/users/${selectedUser.value.id}/servers/${selectedServer.value}`,
-      {
-        method: 'POST'
-      }
-    )
-    if (response.ok) {
-      showAssignServerModal.value = false
-      selectedServer.value = null
-      await fetchUserServers(selectedUser.value.id)
-    }
-  } catch (error) {
-    console.error('Ошибка при назначении сервера:', error)
-  }
-}
-
-// Удаление сервера у пользователя
-const removeServerFromUser = async (userId: number, serverId: number) => {
-  if (!confirm('Вы уверены, что хотите удалить доступ к этому серверу?')) return
-
-  try {
-    const response = await fetchApi(
-      `/api/users/${userId}/servers/${serverId}`,
-      {
-        method: 'DELETE'
-      }
-    )
-    if (response.ok) {
-      await fetchUserServers(userId)
-    }
-  } catch (error) {
-    console.error('Ошибка при удалении сервера:', error)
-  }
-}
-
-onMounted(() => {
-  fetchUsers()
-  fetchServers()
-})
 </script>
 
 <style scoped>
