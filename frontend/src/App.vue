@@ -1,5 +1,6 @@
 <template>
   <div>
+    <VueQueryDevtools />
     <nav class="nav">
       <div class="nav-container">
         <h1 class="nav-title">SSH Gate</h1>
@@ -16,3 +17,8 @@
     </main>
   </div>
 </template>
+
+
+<script setup>
+import { VueQueryDevtools } from '@tanstack/vue-query-devtools'
+</script>
