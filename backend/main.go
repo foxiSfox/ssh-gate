@@ -67,7 +67,7 @@ func main() {
 	})
 
 	// Обслуживаем статические файлы фронтенда
-	fileServer(r, "/", http.Dir("./frontend/dist"))
+	fileServer(r, "/", http.Dir("../frontend/dist"))
 
 	// Запускаем сервер
 	log.Println("Сервер запущен на порту :8080")
@@ -85,7 +85,7 @@ func fileServer(r chi.Router, path string, root http.FileSystem) {
 	fs := http.StripPrefix(path, http.FileServer(root))
 	r.Get(path+"*", func(w http.ResponseWriter, r *http.Request) {
 		if _, err := root.Open(r.URL.Path); os.IsNotExist(err) {
-			http.ServeFile(w, r, "./frontend/dist/index.html")
+			http.ServeFile(w, r, "../frontend/dist/index.html")
 			return
 		}
 		fs.ServeHTTP(w, r)
