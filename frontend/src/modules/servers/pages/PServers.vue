@@ -18,6 +18,7 @@
             <button class="button" @click="viewServerUsers(server)">
               Просмотр пользователей
             </button>
+            <button class="button" @click="editServer(server)">Редактировать</button>
             <button class="button button-danger" @click="onServerDelete(server.id)">
               Удалить
             </button>
@@ -88,13 +89,76 @@
         </div>
       </div>
     </div>
+
+    <!-- Модальное окно редактирования сервера -->
+    <div v-if="showEditServerModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">Редактировать сервер</h3>
+          <button class="modal-close" @click="showEditServerModal = false">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="onServerUpdate">
+            <div class="form-group">
+              <label class="form-label" for="edit-ip">IP адрес</label>
+              <input
+                type="text"
+                id="edit-ip"
+                v-model="editedServer.ip"
+                class="form-input"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-port">Порт</label>
+              <input
+                type="number"
+                id="edit-port"
+                v-model.number="editedServer.port"
+                class="form-input"
+                min="1"
+                max="65535"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-login">Логин</label>
+              <input
+                type="text"
+                id="edit-login"
+                v-model="editedServer.login"
+                class="form-input"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-password">Пароль</label>
+              <input
+                type="password"
+                id="edit-password"
+                v-model="editedServer.password"
+                class="form-input"
+                required
+              />
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="button" @click="showEditServerModal = false">
+                Отмена
+              </button>
+              <button type="submit" class="button button-primary">
+                Сохранить
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
-import { serversFetch, serverCreate, serverDelete } from '../api'
+import { serversFetch, serverCreate, serverDelete, serverUpdate } from '../api'
 
 interface Server {
   id: number
@@ -105,12 +169,14 @@ interface Server {
 }
 
 const showAddServerModal = ref(false)
+const showEditServerModal = ref(false)
 const newServer = ref({
   ip: '',
   port: 22,
   login: '',
   password: ''
 })
+const editedServer = ref({ id: 0, ip: '', port: 22, login: '', password: '' })
 
 const { data: servers } = useQuery({
   queryKey: ['servers'],
@@ -139,6 +205,23 @@ const { mutate: mutateServerDelete } = useMutation({
 
 const onServerDelete = (id: number) => {
   mutateServerDelete(id);
+}
+
+const { mutate: mutateServerUpdate } = useMutation({
+  mutationFn: ({ id, data }: { id: number; data: any }) => serverUpdate(id, data),
+  onSuccess: () => {
+    showEditServerModal.value = false
+    queryClient.invalidateQueries({ queryKey: ['servers'] })
+  },
+})
+
+const editServer = (s: Server) => {
+  editedServer.value = { ...s }
+  showEditServerModal.value = true
+}
+
+const onServerUpdate = () => {
+  mutateServerUpdate({ id: editedServer.value.id, data: editedServer.value })
 }
 
 // Просмотр пользователей сервера
