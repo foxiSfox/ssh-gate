@@ -38,6 +38,23 @@ go run main.go
 
 Приложение будет доступно по адресу `http://localhost:8080` и будет обслуживать статические файлы из `frontend/dist`.
 
+## Запуск в Docker
+
+Готовый образ приложения доступен на Docker Hub. Его можно использовать, если не хочется собирать фронтенд и бэкенд вручную.
+
+```bash
+# загрузить последнюю версию образа
+docker pull foxisfox/ssh-gate:latest
+
+# запустить контейнер
+docker run -p 8080:8080 \
+  -v $PWD/users.db:/app/backend/users.db \
+  -v $PWD/authorized_keys:/app/backend/authorized_keys \
+  foxisfox/ssh-gate:latest
+```
+
+После запуска приложение будет доступно по адресу `http://localhost:8080`. База данных и файл `authorized_keys` будут сохранены на хосте.
+
 ## API
 
 ### Пользователи
