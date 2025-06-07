@@ -18,6 +18,7 @@
             <button class="button" @click="viewUserServers(user)">
               Просмотр серверов
             </button>
+            <button class="button" @click="editUser(user)">Редактировать</button>
             <button class="button button-danger" @click="onUserDelete(user.id)">
               Удалить
             </button>
@@ -67,13 +68,55 @@
         </div>
       </div>
     </div>
+
+    <!-- Модальное окно редактирования пользователя -->
+    <div v-if="showEditUserModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">Редактировать пользователя</h3>
+          <button class="modal-close" @click="showEditUserModal = false">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="onUserUpdate">
+            <div class="form-group">
+              <label class="form-label" for="edit-username">Имя пользователя</label>
+              <input
+                type="text"
+                id="edit-username"
+                v-model="editedUser.username"
+                class="form-input"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-publicKey">Публичный ключ</label>
+              <textarea
+                id="edit-publicKey"
+                v-model="editedUser.public_key"
+                class="form-input"
+                rows="3"
+                required
+              ></textarea>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="button" @click="showEditUserModal = false">
+                Отмена
+              </button>
+              <button type="submit" class="button button-primary">
+                Сохранить
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
-import { usersFetch, userCreate, userDelete } from '../api';
+import { usersFetch, userCreate, userDelete, userUpdate } from '../api';
 
 interface User {
   id: number
@@ -82,10 +125,12 @@ interface User {
 }
 
 const showAddUserModal = ref(false)
+const showEditUserModal = ref(false)
 const user = ref({
   username: '',
   public_key: ''
 })
+const editedUser = ref({ id: 0, username: '', public_key: '' })
 
 const { data: users } = useQuery({
   queryKey: ['users'],
@@ -117,6 +162,23 @@ const onUserDelete = (id: number) => {
     return
   }
   mutateUserDelete(id)
+}
+
+const { mutate: mutateUserUpdate } = useMutation({
+  mutationFn: ({ id, data }: { id: number; data: any }) => userUpdate(id, data),
+  onSuccess: () => {
+    showEditUserModal.value = false
+    queryClient.invalidateQueries({ queryKey: ['users'] })
+  },
+})
+
+const editUser = (u: User) => {
+  editedUser.value = { ...u }
+  showEditUserModal.value = true
+}
+
+const onUserUpdate = () => {
+  mutateUserUpdate({ id: editedUser.value.id, data: editedUser.value })
 }
 
 

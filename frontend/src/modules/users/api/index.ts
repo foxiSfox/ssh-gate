@@ -23,3 +23,14 @@ export const userDelete = async (id: number) => {
   return true;
 }
 
+export const userUpdate = async (id: number, user: any) => {
+  const response = await fetchApi(`/api/users/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(user)
+  })
+  return await response.json()
+}
+

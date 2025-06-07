@@ -23,3 +23,14 @@ export const serverDelete = async (id: number) => {
   })
   return true;
 }
+
+export const serverUpdate = async (id: number, server: any) => {
+  const response = await fetchApi(`/api/servers/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(server)
+  })
+  return await response.json()
+}
