@@ -9,26 +9,31 @@ import (
 
 // SSHConfig содержит конфигурацию для SSH-подключения
 type SSHConfig struct {
-	Host    string
-	Port    int
-	User    string
-	KeyPath string // Путь к приватному ключу для подключения
+	Host     string
+	Port     int
+	User     string
+	KeyPath  string // Путь к приватному ключу для подключения (опционально)
+	Password string // Пароль для подключения (опционально)
 }
 
 // AddAuthorizedKey добавляет публичный ключ в authorized_keys на сервере
 func AddAuthorizedKey(config SSHConfig, publicKey string) error {
 	// Создаем SSH-клиент
+	auths := []ssh.AuthMethod{}
+	if config.KeyPath != "" {
+		key, err := ssh.ParsePrivateKey([]byte(config.KeyPath))
+		if err != nil {
+			return fmt.Errorf("ошибка разбора приватного ключа: %w", err)
+		}
+		auths = append(auths, ssh.PublicKeys(key))
+	}
+	if config.Password != "" {
+		auths = append(auths, ssh.Password(config.Password))
+	}
+
 	sshConfig := &ssh.ClientConfig{
-		User: config.User, // Используем root для управления authorized_keys
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeysCallback(func() ([]ssh.Signer, error) {
-				key, err := ssh.ParsePrivateKey([]byte(config.KeyPath))
-				if err != nil {
-					return nil, fmt.Errorf("ошибка разбора приватного ключа: %w", err)
-				}
-				return []ssh.Signer{key}, nil
-			}),
-		},
+		User:            config.User,
+		Auth:            auths,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
@@ -62,18 +67,21 @@ func AddAuthorizedKey(config SSHConfig, publicKey string) error {
 
 // RemoveAuthorizedKey удаляет публичный ключ из authorized_keys на сервере
 func RemoveAuthorizedKey(config SSHConfig, publicKey string) error {
-	// Создаем SSH-клиент
+	auths := []ssh.AuthMethod{}
+	if config.KeyPath != "" {
+		key, err := ssh.ParsePrivateKey([]byte(config.KeyPath))
+		if err != nil {
+			return fmt.Errorf("ошибка разбора приватного ключа: %w", err)
+		}
+		auths = append(auths, ssh.PublicKeys(key))
+	}
+	if config.Password != "" {
+		auths = append(auths, ssh.Password(config.Password))
+	}
+
 	sshConfig := &ssh.ClientConfig{
-		User: config.User, // Используем root для управления authorized_keys
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeysCallback(func() ([]ssh.Signer, error) {
-				key, err := ssh.ParsePrivateKey([]byte(config.KeyPath))
-				if err != nil {
-					return nil, fmt.Errorf("ошибка разбора приватного ключа: %w", err)
-				}
-				return []ssh.Signer{key}, nil
-			}),
-		},
+		User:            config.User,
+		Auth:            auths,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
