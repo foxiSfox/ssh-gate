@@ -40,6 +40,10 @@ func (h *ServerHandler) CreateServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if server.Port == 0 {
+		server.Port = 22
+	}
+
 	id, err := models.AddServer(h.DB, server)
 	if err != nil {
 		http.Error(w, "Ошибка при добавлении сервера: "+err.Error(), http.StatusInternalServerError)
@@ -130,7 +134,7 @@ func (h *ServerHandler) AssignServerToUser(w http.ResponseWriter, r *http.Reques
 	// Создаем конфигурацию для SSH-подключения
 	sshConfig := ssh.SSHConfig{
 		Host:    server.IP,
-		Port:    22,       // todo надо вынести
+		Port:    server.Port,
 		User:    "deploy", //todo тут все надо выносить
 		KeyPath: string(keyData),
 	}
@@ -213,7 +217,7 @@ func (h *ServerHandler) RemoveServerFromUser(w http.ResponseWriter, r *http.Requ
 	// Создаем конфигурацию для SSH-подключения
 	sshConfig := ssh.SSHConfig{
 		Host:    server.IP,
-		Port:    22, // Стандартный порт SSH
+		Port:    server.Port,
 		User:    "deploy",
 		KeyPath: string(keyData),
 	}

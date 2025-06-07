@@ -14,7 +14,7 @@
               <h4>Доступные серверы:</h4>
               <ul>
                 <li v-for="server in userServers[user.id]" :key="server.id" class="server-item">
-                  <span>{{ server.ip }}</span>
+                  <span>{{ server.ip }}:{{ server.port }}</span>
                   <button class="button button-danger" @click="onRemoveServerFromUser(user.id, server.id)">
                     Удалить доступ
                   </button>
@@ -48,7 +48,7 @@
               >
                 <option value="">Выберите сервер</option>
                 <option v-for="server in availableServers" :key="server.id" :value="server.id">
-                  {{ server.ip }}
+                  {{ server.ip }}:{{ server.port }}
                 </option>
               </select>
             </div>
@@ -81,6 +81,7 @@ interface User {
 interface Server {
   id: number
   ip: string
+  port: number
 }
 
 const showAssignServerModal = ref(false)
