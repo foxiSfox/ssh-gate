@@ -9,6 +9,7 @@ import (
 type Server struct {
 	ID       int64  `json:"id"`
 	IP       string `json:"ip"`
+	Port     int    `json:"port"`
 	Login    string `json:"login"`
 	Password string `json:"password"`
 }
@@ -20,6 +21,7 @@ func CreateServerTable(db *sql.DB) error {
         CREATE TABLE IF NOT EXISTS servers (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 ip TEXT NOT NULL UNIQUE,
+                port INTEGER NOT NULL DEFAULT 22,
                 login TEXT NOT NULL,
                 password TEXT NOT NULL
         );
@@ -52,11 +54,11 @@ func CreateServerTable(db *sql.DB) error {
 // AddServer добавляет новый сервер в базу данных
 func AddServer(db *sql.DB, server Server) (int64, error) {
 	query := `
-        INSERT INTO servers (ip, login, password)
-        VALUES (?, ?, ?);
+        INSERT INTO servers (ip, port, login, password)
+        VALUES (?, ?, ?, ?);
         `
 
-	result, err := db.Exec(query, server.IP, server.Login, server.Password)
+	result, err := db.Exec(query, server.IP, server.Port, server.Login, server.Password)
 	if err != nil {
 		return 0, fmt.Errorf("ошибка добавления сервера: %w", err)
 	}
@@ -72,13 +74,13 @@ func AddServer(db *sql.DB, server Server) (int64, error) {
 // GetServerByID получает сервер по ID
 func GetServerByID(db *sql.DB, id int64) (Server, error) {
 	query := `
-        SELECT id, ip, login, password
+        SELECT id, ip, port, login, password
         FROM servers
         WHERE id = ?;
         `
 
 	var server Server
-	err := db.QueryRow(query, id).Scan(&server.ID, &server.IP, &server.Login, &server.Password)
+	err := db.QueryRow(query, id).Scan(&server.ID, &server.IP, &server.Port, &server.Login, &server.Password)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return Server{}, fmt.Errorf("сервер с ID %d не найден", id)
@@ -92,7 +94,7 @@ func GetServerByID(db *sql.DB, id int64) (Server, error) {
 // GetAllServers получает все серверы
 func GetAllServers(db *sql.DB) ([]Server, error) {
 	query := `
-        SELECT id, ip, login, password
+        SELECT id, ip, port, login, password
         FROM servers;
         `
 
@@ -105,7 +107,7 @@ func GetAllServers(db *sql.DB) ([]Server, error) {
 	var servers []Server
 	for rows.Next() {
 		var server Server
-		if err := rows.Scan(&server.ID, &server.IP, &server.Login, &server.Password); err != nil {
+		if err := rows.Scan(&server.ID, &server.IP, &server.Port, &server.Login, &server.Password); err != nil {
 			return nil, fmt.Errorf("ошибка чтения данных сервера: %w", err)
 		}
 		servers = append(servers, server)
@@ -136,7 +138,7 @@ func AssignServerToUser(db *sql.DB, userID, serverID int64) error {
 // GetUserServers получает все серверы пользователя
 func GetUserServers(db *sql.DB, userID int64) ([]Server, error) {
 	query := `
-        SELECT s.id, s.ip, s.login, s.password
+        SELECT s.id, s.ip, s.port, s.login, s.password
 	FROM servers s
 	JOIN user_servers us ON s.id = us.server_id
 	WHERE us.user_id = ?;
@@ -151,7 +153,7 @@ func GetUserServers(db *sql.DB, userID int64) ([]Server, error) {
 	var servers []Server
 	for rows.Next() {
 		var server Server
-		if err := rows.Scan(&server.ID, &server.IP, &server.Login, &server.Password); err != nil {
+		if err := rows.Scan(&server.ID, &server.IP, &server.Port, &server.Login, &server.Password); err != nil {
 			return nil, fmt.Errorf("ошибка чтения данных сервера: %w", err)
 		}
 		servers = append(servers, server)

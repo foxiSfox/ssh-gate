@@ -53,7 +53,8 @@ POST /api/servers
 Content-Type: application/json
 
 {
-    "ip": "192.168.1.100"
+    "ip": "192.168.1.100",
+    "port": 2222
 }
 ```
 
