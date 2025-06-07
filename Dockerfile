@@ -43,7 +43,6 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 # Копируем собранный бэкэнд
 COPY --from=backend-builder /app/backend/main ./backend/main
 COPY --from=backend-builder /app/backend/authorized_keys ./backend/authorized_keys
-COPY --from=backend-builder /app/backend/id_rsa_jump_server ./backend/id_rsa_jump_server
 
 # Указываем порт
 EXPOSE 8080
