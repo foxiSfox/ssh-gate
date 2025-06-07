@@ -12,7 +12,7 @@
       <div v-for="server in servers" :key="server.id" class="list-item">
         <div class="list-item-content">
           <div>
-            <h3>IP: {{ server.ip }}</h3>
+            <h3>{{ server.ip }}:{{ server.port }}</h3>
           </div>
           <div class="list-item-actions">
             <button class="button" @click="viewServerUsers(server)">
@@ -45,6 +45,17 @@
                 required
               />
             </div>
+            <div class="form-group">
+              <label class="form-label" for="port">Порт</label>
+              <input
+                type="number"
+                id="port"
+                v-model.number="newServer.port"
+                class="form-input"
+                min="1"
+                max="65535"
+              />
+            </div>
             <div class="modal-footer">
               <button type="button" class="button" @click="showAddServerModal = false">
                 Отмена
@@ -68,11 +79,13 @@ import { serversFetch, serverCreate, serverDelete } from '../api'
 interface Server {
   id: number
   ip: string
+  port: number
 }
 
 const showAddServerModal = ref(false)
 const newServer = ref({
-  ip: ''
+  ip: '',
+  port: 22
 })
 
 const { data: servers } = useQuery({
