@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
-	"os"
 	"strconv"
 
 	"ssh-gate/models"
@@ -15,16 +14,12 @@ import (
 
 // ServerHandler содержит обработчики для API серверов
 type ServerHandler struct {
-	DB      *sql.DB
-	KeyPath string // Путь к приватному ключу для подключения к серверам
+	DB *sql.DB
 }
 
 // NewServerHandler создает новый экземпляр ServerHandler
-func NewServerHandler(db *sql.DB, keyPath string) *ServerHandler {
-	return &ServerHandler{
-		DB:      db,
-		KeyPath: keyPath,
-	}
+func NewServerHandler(db *sql.DB) *ServerHandler {
+	return &ServerHandler{DB: db}
 }
 
 // CreateServer обрабатывает запрос на создание нового сервера
@@ -35,8 +30,8 @@ func (h *ServerHandler) CreateServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if server.IP == "" {
-		http.Error(w, "IP адрес обязателен", http.StatusBadRequest)
+	if server.IP == "" || server.Login == "" || server.Password == "" {
+		http.Error(w, "IP, логин и пароль обязательны", http.StatusBadRequest)
 		return
 	}
 
@@ -89,12 +84,6 @@ func (h *ServerHandler) GetAllServers(w http.ResponseWriter, r *http.Request) {
 
 // AssignServerToUser обрабатывает запрос на привязку сервера к пользователю
 func (h *ServerHandler) AssignServerToUser(w http.ResponseWriter, r *http.Request) {
-	// Читаем приватный ключ
-	keyData, err := os.ReadFile(h.KeyPath)
-	if err != nil {
-		http.Error(w, "Ошибка чтения приватного ключа: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 
 	userIDStr := chi.URLParam(r, "userId")
 	serverIDStr := chi.URLParam(r, "serverId")
@@ -133,10 +122,10 @@ func (h *ServerHandler) AssignServerToUser(w http.ResponseWriter, r *http.Reques
 
 	// Создаем конфигурацию для SSH-подключения
 	sshConfig := ssh.SSHConfig{
-		Host:    server.IP,
-		Port:    server.Port,
-		User:    "deploy", //todo тут все надо выносить
-		KeyPath: string(keyData),
+		Host:     server.IP,
+		Port:     server.Port,
+		User:     server.Login,
+		Password: server.Password,
 	}
 
 	// Добавляем публичный ключ на сервер, к которому надо получить доступ пользователю
@@ -207,19 +196,12 @@ func (h *ServerHandler) RemoveServerFromUser(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Читаем приватный ключ
-	keyData, err := os.ReadFile(h.KeyPath)
-	if err != nil {
-		http.Error(w, "Ошибка чтения приватного ключа: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	// Создаем конфигурацию для SSH-подключения
 	sshConfig := ssh.SSHConfig{
-		Host:    server.IP,
-		Port:    server.Port,
-		User:    "deploy",
-		KeyPath: string(keyData),
+		Host:     server.IP,
+		Port:     server.Port,
+		User:     server.Login,
+		Password: server.Password,
 	}
 
 	// Удаляем публичный ключ с сервера

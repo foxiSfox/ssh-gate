@@ -22,16 +22,9 @@ func main() {
 	}
 	defer database.Close()
 
-	// Получаем путь к приватному ключу из переменной окружения
-	os.Setenv("SSH_PRIVATE_KEY_PATH", "id_rsa_jump_server")
-	keyPath := os.Getenv("SSH_PRIVATE_KEY_PATH")
-	if keyPath == "" {
-		log.Fatal("Не указан путь к приватному ключу (SSH_PRIVATE_KEY_PATH)")
-	}
-
 	// Создаем обработчики
 	userHandler := handlers.NewUserHandler(database)
-	serverHandler := handlers.NewServerHandler(database, keyPath)
+	serverHandler := handlers.NewServerHandler(database)
 
 	// Создаем роутер
 	r := chi.NewRouter()
@@ -67,7 +60,7 @@ func main() {
 	})
 
 	// Обслуживаем статические файлы фронтенда
-	fileServer(r, "/", http.Dir("./frontend/dist"))
+	fileServer(r, "/", http.Dir("../frontend/dist"))
 
 	// Запускаем сервер
 	log.Println("Сервер запущен на порту :8080")
@@ -85,7 +78,7 @@ func fileServer(r chi.Router, path string, root http.FileSystem) {
 	fs := http.StripPrefix(path, http.FileServer(root))
 	r.Get(path+"*", func(w http.ResponseWriter, r *http.Request) {
 		if _, err := root.Open(r.URL.Path); os.IsNotExist(err) {
-			http.ServeFile(w, r, "./frontend/dist/index.html")
+			http.ServeFile(w, r, "../frontend/dist/index.html")
 			return
 		}
 		fs.ServeHTTP(w, r)

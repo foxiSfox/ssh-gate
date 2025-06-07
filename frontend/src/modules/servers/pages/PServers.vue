@@ -56,6 +56,26 @@
                 max="65535"
               />
             </div>
+            <div class="form-group">
+              <label class="form-label" for="login">Логин</label>
+              <input
+                type="text"
+                id="login"
+                v-model="newServer.login"
+                class="form-input"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="password">Пароль</label>
+              <input
+                type="password"
+                id="password"
+                v-model="newServer.password"
+                class="form-input"
+                required
+              />
+            </div>
             <div class="modal-footer">
               <button type="button" class="button" @click="showAddServerModal = false">
                 Отмена
@@ -80,12 +100,16 @@ interface Server {
   id: number
   ip: string
   port: number
+  login: string
+  password: string
 }
 
 const showAddServerModal = ref(false)
 const newServer = ref({
   ip: '',
-  port: 22
+  port: 22,
+  login: '',
+  password: ''
 })
 
 const { data: servers } = useQuery({

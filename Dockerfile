@@ -49,4 +49,4 @@ COPY --from=backend-builder /app/backend/id_rsa_jump_server ./backend/id_rsa_jum
 EXPOSE 8080
 
 # Запускаем backend
-CMD ["./backend/main"]
+CMD ["sh", "-c", "cd backend && ./main"]
