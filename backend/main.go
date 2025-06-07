@@ -22,16 +22,9 @@ func main() {
 	}
 	defer database.Close()
 
-	// Получаем путь к приватному ключу из переменной окружения
-	os.Setenv("SSH_PRIVATE_KEY_PATH", "id_rsa_jump_server")
-	keyPath := os.Getenv("SSH_PRIVATE_KEY_PATH")
-	if keyPath == "" {
-		log.Fatal("Не указан путь к приватному ключу (SSH_PRIVATE_KEY_PATH)")
-	}
-
 	// Создаем обработчики
 	userHandler := handlers.NewUserHandler(database)
-	serverHandler := handlers.NewServerHandler(database, keyPath)
+	serverHandler := handlers.NewServerHandler(database)
 
 	// Создаем роутер
 	r := chi.NewRouter()

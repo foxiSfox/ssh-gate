@@ -45,6 +45,26 @@
                 required
               />
             </div>
+            <div class="form-group">
+              <label class="form-label" for="login">Логин</label>
+              <input
+                type="text"
+                id="login"
+                v-model="newServer.login"
+                class="form-input"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="password">Пароль</label>
+              <input
+                type="password"
+                id="password"
+                v-model="newServer.password"
+                class="form-input"
+                required
+              />
+            </div>
             <div class="modal-footer">
               <button type="button" class="button" @click="showAddServerModal = false">
                 Отмена
@@ -68,11 +88,15 @@ import { serversFetch, serverCreate, serverDelete } from '../api'
 interface Server {
   id: number
   ip: string
+  login: string
+  password: string
 }
 
 const showAddServerModal = ref(false)
 const newServer = ref({
-  ip: ''
+  ip: '',
+  login: '',
+  password: ''
 })
 
 const { data: servers } = useQuery({
