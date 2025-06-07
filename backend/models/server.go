@@ -236,6 +236,20 @@ func RemoveAllUsersFromServer(db *sql.DB, serverID int64) error {
 	return nil
 }
 
+// RemoveAllServersFromUser удаляет все привязки серверов к пользователю
+func RemoveAllServersFromUser(db *sql.DB, userID int64) error {
+	query := `
+        DELETE FROM user_servers
+        WHERE user_id = ?;
+        `
+
+	if _, err := db.Exec(query, userID); err != nil {
+		return fmt.Errorf("ошибка удаления привязок серверов к пользователю: %w", err)
+	}
+
+	return nil
+}
+
 // RemoveServerFromUser удаляет привязку сервера к пользователю
 func RemoveServerFromUser(db *sql.DB, userID, serverID int64) error {
 	query := `
