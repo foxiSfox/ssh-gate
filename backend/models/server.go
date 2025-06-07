@@ -120,6 +120,31 @@ func GetAllServers(db *sql.DB) ([]Server, error) {
 	return servers, nil
 }
 
+// UpdateServer обновляет данные сервера
+func UpdateServer(db *sql.DB, server Server) error {
+	query := `
+        UPDATE servers
+        SET ip = ?, port = ?, login = ?, password = ?
+        WHERE id = ?;
+        `
+
+	result, err := db.Exec(query, server.IP, server.Port, server.Login, server.Password, server.ID)
+	if err != nil {
+		return fmt.Errorf("ошибка обновления сервера: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("ошибка получения количества затронутых строк: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("сервер с ID %d не найден", server.ID)
+	}
+
+	return nil
+}
+
 // AssignServerToUser привязывает сервер к пользователю
 func AssignServerToUser(db *sql.DB, userID, serverID int64) error {
 	query := `
@@ -164,6 +189,65 @@ func GetUserServers(db *sql.DB, userID int64) ([]Server, error) {
 	}
 
 	return servers, nil
+}
+
+// GetServerUsers получает всех пользователей, имеющих доступ к серверу
+func GetServerUsers(db *sql.DB, serverID int64) ([]User, error) {
+	query := `
+        SELECT u.id, u.username, u.public_key
+        FROM users u
+        JOIN user_servers us ON u.id = us.user_id
+        WHERE us.server_id = ?;
+        `
+
+	rows, err := db.Query(query, serverID)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка получения пользователей сервера: %w", err)
+	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		var user User
+		if err := rows.Scan(&user.ID, &user.Username, &user.PublicKey); err != nil {
+			return nil, fmt.Errorf("ошибка чтения данных пользователя: %w", err)
+		}
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("ошибка при переборе строк: %w", err)
+	}
+
+	return users, nil
+}
+
+// RemoveAllUsersFromServer удаляет все привязки пользователей к серверу
+func RemoveAllUsersFromServer(db *sql.DB, serverID int64) error {
+	query := `
+        DELETE FROM user_servers
+        WHERE server_id = ?;
+        `
+
+	if _, err := db.Exec(query, serverID); err != nil {
+		return fmt.Errorf("ошибка удаления привязок пользователей к серверу: %w", err)
+	}
+
+	return nil
+}
+
+// RemoveAllServersFromUser удаляет все привязки серверов к пользователю
+func RemoveAllServersFromUser(db *sql.DB, userID int64) error {
+	query := `
+        DELETE FROM user_servers
+        WHERE user_id = ?;
+        `
+
+	if _, err := db.Exec(query, userID); err != nil {
+		return fmt.Errorf("ошибка удаления привязок серверов к пользователю: %w", err)
+	}
+
+	return nil
 }
 
 // RemoveServerFromUser удаляет привязку сервера к пользователю

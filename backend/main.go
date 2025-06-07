@@ -40,6 +40,7 @@ func main() {
 			r.Post("/", userHandler.CreateUser)
 			r.Get("/", userHandler.GetAllUsers)
 			r.Get("/{id}", userHandler.GetUser)
+			r.Put("/{id}", userHandler.UpdateUser)
 			r.Delete("/{id}", userHandler.DeleteUser)
 		})
 
@@ -48,6 +49,7 @@ func main() {
 			r.Post("/", serverHandler.CreateServer)
 			r.Get("/", serverHandler.GetAllServers)
 			r.Get("/{id}", serverHandler.GetServer)
+			r.Put("/{id}", serverHandler.UpdateServer)
 			r.Delete("/{id}", serverHandler.DeleteServer)
 		})
 
