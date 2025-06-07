@@ -166,6 +166,51 @@ func GetUserServers(db *sql.DB, userID int64) ([]Server, error) {
 	return servers, nil
 }
 
+// GetServerUsers получает всех пользователей, имеющих доступ к серверу
+func GetServerUsers(db *sql.DB, serverID int64) ([]User, error) {
+	query := `
+        SELECT u.id, u.username, u.public_key
+        FROM users u
+        JOIN user_servers us ON u.id = us.user_id
+        WHERE us.server_id = ?;
+        `
+
+	rows, err := db.Query(query, serverID)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка получения пользователей сервера: %w", err)
+	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		var user User
+		if err := rows.Scan(&user.ID, &user.Username, &user.PublicKey); err != nil {
+			return nil, fmt.Errorf("ошибка чтения данных пользователя: %w", err)
+		}
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("ошибка при переборе строк: %w", err)
+	}
+
+	return users, nil
+}
+
+// RemoveAllUsersFromServer удаляет все привязки пользователей к серверу
+func RemoveAllUsersFromServer(db *sql.DB, serverID int64) error {
+	query := `
+        DELETE FROM user_servers
+        WHERE server_id = ?;
+        `
+
+	if _, err := db.Exec(query, serverID); err != nil {
+		return fmt.Errorf("ошибка удаления привязок пользователей к серверу: %w", err)
+	}
+
+	return nil
+}
+
 // RemoveServerFromUser удаляет привязку сервера к пользователю
 func RemoveServerFromUser(db *sql.DB, userID, serverID int64) error {
 	query := `

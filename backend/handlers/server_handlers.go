@@ -222,7 +222,6 @@ func (h *ServerHandler) RemoveServerFromUser(w http.ResponseWriter, r *http.Requ
 
 // DeleteServer обрабатывает запрос на удаление сервера по ID
 func (h *ServerHandler) DeleteServer(w http.ResponseWriter, r *http.Request) {
-	// todo нужно отозвать доступы у вех пользователей
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -230,8 +229,44 @@ func (h *ServerHandler) DeleteServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = models.DeleteServer(h.DB, id)
+	// Получаем информацию о сервере
+	server, err := models.GetServerByID(h.DB, id)
 	if err != nil {
+		http.Error(w, "Сервер не найден: "+err.Error(), http.StatusNotFound)
+		return
+	}
+
+	// Получаем пользователей, имеющих доступ к серверу
+	users, err := models.GetServerUsers(h.DB, id)
+	if err != nil {
+		http.Error(w, "Ошибка при получении пользователей сервера: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Конфигурация для SSH-подключения к удаляемому серверу
+	sshConfig := ssh.SSHConfig{
+		Host:     server.IP,
+		Port:     server.Port,
+		User:     server.Login,
+		Password: server.Password,
+	}
+
+	// Отзываем ключи у всех пользователей
+	for _, user := range users {
+		if err := ssh.RemoveAuthorizedKey(sshConfig, user.PublicKey); err != nil {
+			http.Error(w, "Ошибка при удалении ключа с сервера: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Удаляем записи из user_servers после успешного отзыва ключей
+	if err := models.RemoveAllUsersFromServer(h.DB, id); err != nil {
+		http.Error(w, "Ошибка при удалении привязок пользователей: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Удаляем сам сервер
+	if err := models.DeleteServer(h.DB, id); err != nil {
 		http.Error(w, "Ошибка при удалении сервера: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
