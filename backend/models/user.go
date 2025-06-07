@@ -99,6 +99,31 @@ func GetAllUsers(db *sql.DB) ([]User, error) {
 	return users, nil
 }
 
+// UpdateUser обновляет данные пользователя
+func UpdateUser(db *sql.DB, user User) error {
+	query := `
+        UPDATE users
+        SET username = ?, public_key = ?
+        WHERE id = ?;
+        `
+
+	result, err := db.Exec(query, user.Username, user.PublicKey, user.ID)
+	if err != nil {
+		return fmt.Errorf("ошибка обновления пользователя: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("ошибка получения количества затронутых строк: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("пользователь с ID %d не найден", user.ID)
+	}
+
+	return nil
+}
+
 // DeleteUser удаление пользователя
 func DeleteUser(db *sql.DB, id int64) error {
 	query := `

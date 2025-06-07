@@ -98,6 +98,41 @@ func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
+// UpdateUser обрабатывает запрос на обновление пользователя
+func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Неверный формат ID", http.StatusBadRequest)
+		return
+	}
+
+	var user models.User
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		http.Error(w, "Ошибка при разборе запроса: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if user.Username == "" {
+		http.Error(w, "Имя пользователя обязательно", http.StatusBadRequest)
+		return
+	}
+
+	if user.PublicKey == "" {
+		http.Error(w, "Публичный ключ обязателен", http.StatusBadRequest)
+		return
+	}
+
+	user.ID = id
+	if err := models.UpdateUser(h.DB, user); err != nil {
+		http.Error(w, "Ошибка при обновлении пользователя: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
+}
+
 // DeleteUser обрабатывает запрос на удаление пользователя
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")

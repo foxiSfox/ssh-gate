@@ -120,6 +120,31 @@ func GetAllServers(db *sql.DB) ([]Server, error) {
 	return servers, nil
 }
 
+// UpdateServer обновляет данные сервера
+func UpdateServer(db *sql.DB, server Server) error {
+	query := `
+        UPDATE servers
+        SET ip = ?, port = ?, login = ?, password = ?
+        WHERE id = ?;
+        `
+
+	result, err := db.Exec(query, server.IP, server.Port, server.Login, server.Password, server.ID)
+	if err != nil {
+		return fmt.Errorf("ошибка обновления сервера: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("ошибка получения количества затронутых строк: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("сервер с ID %d не найден", server.ID)
+	}
+
+	return nil
+}
+
 // AssignServerToUser привязывает сервер к пользователю
 func AssignServerToUser(db *sql.DB, userID, serverID int64) error {
 	query := `
