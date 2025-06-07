@@ -82,6 +82,40 @@ func (h *ServerHandler) GetAllServers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(servers)
 }
 
+// UpdateServer обрабатывает запрос на обновление сервера
+func (h *ServerHandler) UpdateServer(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Неверный формат ID", http.StatusBadRequest)
+		return
+	}
+
+	var server models.Server
+	if err := json.NewDecoder(r.Body).Decode(&server); err != nil {
+		http.Error(w, "Ошибка при разборе запроса: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if server.IP == "" || server.Login == "" || server.Password == "" {
+		http.Error(w, "IP, логин и пароль обязательны", http.StatusBadRequest)
+		return
+	}
+
+	if server.Port == 0 {
+		server.Port = 22
+	}
+
+	server.ID = id
+	if err := models.UpdateServer(h.DB, server); err != nil {
+		http.Error(w, "Ошибка при обновлении сервера: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(server)
+}
+
 // AssignServerToUser обрабатывает запрос на привязку сервера к пользователю
 func (h *ServerHandler) AssignServerToUser(w http.ResponseWriter, r *http.Request) {
 
