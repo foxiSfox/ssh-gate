@@ -124,12 +124,12 @@ func RemoveAuthorizedKey(config SSHConfig, publicKey string) error {
 func ValidatePublicKey(publicKey string) (string, error) {
 	trimmed := strings.TrimSpace(publicKey)
 	if trimmed == "" {
-		return "", fmt.Errorf("пустой публичный ключ")
+		return "", fmt.Errorf("public key is empty")
 	}
 
 	pub, comment, _, rest, err := ssh.ParseAuthorizedKey([]byte(trimmed))
 	if err != nil || len(strings.TrimSpace(string(rest))) > 0 {
-		return "", fmt.Errorf("не удалось разобрать публичный ключ: %w", err)
+		return "", fmt.Errorf("failed to parse public key: %w", err)
 	}
 
 	allowedTypes := map[string]struct{}{
@@ -141,18 +141,18 @@ func ValidatePublicKey(publicKey string) (string, error) {
 	}
 
 	if _, ok := allowedTypes[pub.Type()]; !ok {
-		return "", fmt.Errorf("тип ключа %s не поддерживается", pub.Type())
+		return "", fmt.Errorf("unsupported key type %s", pub.Type())
 	}
 
 	if cryptoKey, ok := pub.(ssh.CryptoPublicKey); ok {
 		switch key := cryptoKey.CryptoPublicKey().(type) {
 		case *rsa.PublicKey:
 			if key.Size()*8 < 2048 {
-				return "", fmt.Errorf("RSA ключ должен быть не менее 2048 бит")
+				return "", fmt.Errorf("RSA key length must be at least 2048 bits")
 			}
 		case *ecdsa.PublicKey:
 			if key.Params().BitSize < 256 {
-				return "", fmt.Errorf("ECDSA ключ должен быть не менее 256 бит")
+				return "", fmt.Errorf("ECDSA key length must be at least 256 bits")
 			}
 		}
 	}
