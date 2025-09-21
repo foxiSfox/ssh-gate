@@ -149,10 +149,12 @@ func (h *ServerHandler) AssignServerToUser(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Проверяем корректность публичного ключа
-	if err := ssh.ValidatePublicKey(user.PublicKey); err != nil {
+	validatedKey, err := ssh.ValidatePublicKey(user.PublicKey)
+	if err != nil {
 		http.Error(w, "Неверный формат публичного ключа: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	user.PublicKey = validatedKey
 
 	// Создаем конфигурацию для SSH-подключения
 	sshConfig := ssh.SSHConfig{

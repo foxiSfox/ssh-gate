@@ -1,6 +1,8 @@
 package ssh
 
 import (
+	"crypto/ecdsa"
+	"crypto/rsa"
 	"fmt"
 	"strings"
 
@@ -119,16 +121,46 @@ func RemoveAuthorizedKey(config SSHConfig, publicKey string) error {
 }
 
 // ValidatePublicKey проверяет корректность публичного ключа
-func ValidatePublicKey(publicKey string) error {
-	// Проверяем, что ключ начинается с правильного префикса
-	if !strings.HasPrefix(publicKey, "ssh-rsa ") && !strings.HasPrefix(publicKey, "ssh-ed25519 ") {
-		return fmt.Errorf("неверный формат публичного ключа")
+func ValidatePublicKey(publicKey string) (string, error) {
+	trimmed := strings.TrimSpace(publicKey)
+	if trimmed == "" {
+		return "", fmt.Errorf("пустой публичный ключ")
 	}
 
-	// Проверяем, что ключ не пустой
-	if len(strings.TrimSpace(publicKey)) == 0 {
-		return fmt.Errorf("пустой публичный ключ")
+	pub, comment, _, rest, err := ssh.ParseAuthorizedKey([]byte(trimmed))
+	if err != nil || len(strings.TrimSpace(string(rest))) > 0 {
+		return "", fmt.Errorf("не удалось разобрать публичный ключ: %w", err)
 	}
 
-	return nil
+	allowedTypes := map[string]struct{}{
+		"ssh-rsa":             {},
+		"ssh-ed25519":         {},
+		"ecdsa-sha2-nistp256": {},
+		"ecdsa-sha2-nistp384": {},
+		"ecdsa-sha2-nistp521": {},
+	}
+
+	if _, ok := allowedTypes[pub.Type()]; !ok {
+		return "", fmt.Errorf("тип ключа %s не поддерживается", pub.Type())
+	}
+
+	if cryptoKey, ok := pub.(ssh.CryptoPublicKey); ok {
+		switch key := cryptoKey.CryptoPublicKey().(type) {
+		case *rsa.PublicKey:
+			if key.Size()*8 < 2048 {
+				return "", fmt.Errorf("RSA ключ должен быть не менее 2048 бит")
+			}
+		case *ecdsa.PublicKey:
+			if key.Params().BitSize < 256 {
+				return "", fmt.Errorf("ECDSA ключ должен быть не менее 256 бит")
+			}
+		}
+	}
+
+	normalized := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(pub)))
+	if comment = strings.TrimSpace(comment); comment != "" {
+		normalized = normalized + " " + comment
+	}
+
+	return normalized, nil
 }
