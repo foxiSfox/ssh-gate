@@ -47,7 +47,7 @@ const createApiError = async (response: Response): Promise<ApiError> => {
     const text = await cloned.text()
     const { message, payload } = extractMessage(text, fallbackMessage)
     return new ApiError(message, response.status, payload)
-  } catch (error) {
+  } catch {
     return new ApiError(fallbackMessage, response.status)
   }
 }

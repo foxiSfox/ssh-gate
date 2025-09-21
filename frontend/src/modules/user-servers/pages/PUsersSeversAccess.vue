@@ -42,7 +42,7 @@
               <label class="form-label" for="server">Выберите сервер</label>
               <select
                 id="server"
-                v-model="selectedServer"
+                v-model.number="selectedServer"
                 class="form-input"
                 required
               >
@@ -69,31 +69,22 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/vue-query';
-import { usersFetch, serversFetch, userServersFetch, assignServer, removeServerFromUser } from "../api";
-
-interface User {
-  id: number
-  username: string
-  public_key: string
-}
-
-interface Server {
-  id: number
-  ip: string
-  port: number
-}
+import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/vue-query'
+import { usersFetch, serversFetch, userServersFetch, assignServer, removeServerFromUser } from '../api'
+import type { UserDto } from '@/modules/users/api'
+import type { ServerDto } from '@/modules/servers/api'
+import type { UserServerPayload } from '../api'
 
 const showAssignServerModal = ref(false)
-const selectedUser = ref<User | null>(null)
-const selectedServer = defineModel()
+const selectedUser = ref<UserDto | null>(null)
+const selectedServer = ref<number | null>(null)
 
-const { data: users } = useQuery({
+const { data: users } = useQuery<UserDto[]>({
   queryKey: ['users'],
   queryFn: usersFetch,
 })
 
-const { data: servers } = useQuery({
+const { data: servers } = useQuery<ServerDto[]>({
   queryKey: ['servers'],
   queryFn: serversFetch,
 })
@@ -101,32 +92,33 @@ const { data: servers } = useQuery({
 const userServersQueries = useQueries({
   queries: computed(() => {
     return users.value
-      ? users?.value?.map((user: User) => ({
-          queryKey: ['user-servers', user.id],
+      ? users.value.map((user) => ({
+          queryKey: ['user-servers', user.id] as const,
           queryFn: () => userServersFetch(user.id),
         }))
       : []
   })
 })
 
-const userServers = computed(() => {
-  const result: Record<number, any> = {}
+const userServers = computed<Record<number, ServerDto[]>>(() => {
+  const result: Record<number, ServerDto[]> = {}
   userServersQueries.value.forEach((queryResult, index) => {
     const user = users.value?.[index]
-    if (user) {
-      result[user.id] = queryResult.data
+    const data = queryResult.data as ServerDto[] | undefined
+    if (user && data) {
+      result[user.id] = data
     }
   })
   return result
 })
 
 const queryClient = useQueryClient()
-const { mutate: mutateAssignServer } = useMutation({
+const { mutate: mutateAssignServer } = useMutation<boolean, unknown, UserServerPayload>({
   mutationFn: assignServer,
   onSuccess: (_, variables) => {
-    showAssignServerModal.value = false;
-    selectedServer.value = null;
-    queryClient.invalidateQueries({ queryKey: ['user-servers', variables.userId] });
+    showAssignServerModal.value = false
+    selectedServer.value = null
+    queryClient.invalidateQueries({ queryKey: ['user-servers', variables.userId] })
   },
 })
 
@@ -137,11 +129,11 @@ const onAssignServer = async () => {
 
   mutateAssignServer({
     userId: selectedUser.value.id,
-    serverId: selectedServer.value
+    serverId: selectedServer.value,
   })
 }
 
-const { mutate: mutateRemoveServerFromUser} = useMutation({
+const { mutate: mutateRemoveServerFromUser } = useMutation<boolean, unknown, UserServerPayload>({
   mutationFn: removeServerFromUser,
   onSuccess: (_, variables) => {
     queryClient.invalidateQueries({ queryKey: ['user-servers', variables.userId] })
@@ -166,7 +158,7 @@ const availableServers = computed(() => {
     userServers.value[selectedUser.value.id]?.map((s: Server) => s.id) || []
   )
 
-  return servers.value.filter((server: Server) => !userServerIds.has(server.id))
+  return (servers.value ?? []).filter((server) => !userServerIds.has(server.id))
 })
 
 </script>

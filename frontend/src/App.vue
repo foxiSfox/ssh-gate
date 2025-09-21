@@ -20,7 +20,7 @@
 </template>
 
 
-<script setup>
+<script setup lang="ts">
 import { VueQueryDevtools } from '@tanstack/vue-query-devtools'
 import GlobalNotifications from '@/shared/components/GlobalNotifications.vue'
 </script>
