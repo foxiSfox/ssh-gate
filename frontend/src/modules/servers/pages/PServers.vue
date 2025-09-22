@@ -209,7 +209,7 @@ const { mutate: mutateServerUpdate } = useMutation({
   },
 })
 
-const editServer = (s: Server) => {
+const editServer = (s: ServerDto) => {
   editedServer.value = { ...s }
   showEditServerModal.value = true
 }

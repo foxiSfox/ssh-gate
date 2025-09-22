@@ -168,7 +168,7 @@ const { mutate: mutateUserUpdate } = useMutation({
   },
 })
 
-const editUser = (u: User) => {
+const editUser = (u: UserDto) => {
   editedUser.value = { ...u }
   showEditUserModal.value = true
 }

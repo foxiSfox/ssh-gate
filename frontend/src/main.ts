@@ -1,5 +1,10 @@
 import './assets/main.css'
-import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
+import {
+  MutationCache,
+  QueryCache,
+  QueryClient,
+  VueQueryPlugin,
+} from '@tanstack/vue-query'
 import router from './router'
 import { createApp } from 'vue'
 import App from './App.vue'
@@ -11,14 +16,12 @@ const handleError = (error: unknown) => {
 }
 
 const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      onError: handleError,
-    },
-    mutations: {
-      onError: handleError,
-    },
-  },
+  queryCache: new QueryCache({
+    onError: (error) => handleError(error),
+  }),
+  mutationCache: new MutationCache({
+    onError: (error) => handleError(error),
+  }),
 })
 
 const app = createApp(App)

@@ -155,7 +155,7 @@ const availableServers = computed(() => {
     return []
   }
   const userServerIds = new Set<number>(
-    userServers.value[selectedUser.value.id]?.map((s: Server) => s.id) || []
+    userServers.value[selectedUser.value.id]?.map((s: ServerDto) => s.id) || []
   )
 
   return (servers.value ?? []).filter((server) => !userServerIds.has(server.id))
