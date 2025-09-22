@@ -42,6 +42,13 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	normalizedKey, err := ssh.ValidatePublicKey(user.PublicKey)
+	if err != nil {
+		http.Error(w, "Неверный формат публичного ключа: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	user.PublicKey = normalizedKey
+
 	id, err := models.AddUser(h.DB, user)
 	if err != nil {
 		http.Error(w, "Ошибка при добавлении пользователя: "+err.Error(), http.StatusInternalServerError)
@@ -123,6 +130,13 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Публичный ключ обязателен", http.StatusBadRequest)
 		return
 	}
+
+	normalizedKey, err := ssh.ValidatePublicKey(user.PublicKey)
+	if err != nil {
+		http.Error(w, "Неверный формат публичного ключа: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	user.PublicKey = normalizedKey
 
 	user.ID = id
 	if err := models.UpdateUser(h.DB, user); err != nil {

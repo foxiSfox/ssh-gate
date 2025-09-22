@@ -116,29 +116,25 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
-import { usersFetch, userCreate, userDelete, userUpdate } from '../api';
-
-interface User {
-  id: number
-  username: string
-  public_key: string
-}
+import { usersFetch, userCreate, userDelete, userUpdate } from '../api'
+import type { UserDto, UserPayload } from '../api'
+import { notify } from '@/shared/notifications'
 
 const showAddUserModal = ref(false)
 const showEditUserModal = ref(false)
-const user = ref({
+const user = ref<UserPayload>({
   username: '',
   public_key: ''
 })
-const editedUser = ref({ id: 0, username: '', public_key: '' })
+const editedUser = ref<UserDto>({ id: 0, username: '', public_key: '' })
 
-const { data: users } = useQuery({
+const { data: users } = useQuery<UserDto[]>({
   queryKey: ['users'],
   queryFn: usersFetch,
 })
 
 const queryClient = useQueryClient()
-const { mutate: mutateUserCreate } = useMutation({
+const { mutate: mutateUserCreate } = useMutation<UserDto, unknown, UserPayload>({
   mutationFn: userCreate,
   onSuccess: () => {
     showAddUserModal.value = false
@@ -147,7 +143,7 @@ const { mutate: mutateUserCreate } = useMutation({
 })
 
 const onUserCreate = () => {
-  mutateUserCreate(JSON.stringify(user.value))
+  mutateUserCreate({ ...user.value })
 }
 
 const { mutate: mutateUserDelete } = useMutation({
@@ -165,7 +161,7 @@ const onUserDelete = (id: number) => {
 }
 
 const { mutate: mutateUserUpdate } = useMutation({
-  mutationFn: ({ id, data }: { id: number; data: any }) => userUpdate(id, data),
+  mutationFn: ({ id, data }: { id: number; data: UserPayload }) => userUpdate(id, data),
   onSuccess: () => {
     showEditUserModal.value = false
     queryClient.invalidateQueries({ queryKey: ['users'] })
@@ -178,13 +174,22 @@ const editUser = (u: User) => {
 }
 
 const onUserUpdate = () => {
-  mutateUserUpdate({ id: editedUser.value.id, data: editedUser.value })
+  mutateUserUpdate({
+    id: editedUser.value.id,
+    data: {
+      username: editedUser.value.username,
+      public_key: editedUser.value.public_key,
+    },
+  })
 }
 
 
 // Просмотр серверов пользователя
-const viewUserServers = (user: User) => {
-  // TODO: Реализовать просмотр серверов пользователя
+const viewUserServers = (targetUser: UserDto) => {
+  notify({
+    type: 'info',
+    message: `Просмотр серверов для ${targetUser.username} пока недоступен`,
+  })
 }
 </script>
 

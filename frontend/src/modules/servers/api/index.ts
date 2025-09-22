@@ -1,36 +1,46 @@
-import { fetchApi } from "@/shared/utils.ts";
+import { fetchApi } from '@/shared/utils.ts'
 
-export const serversFetch = async () => {
-  const response = await fetchApi('/api/servers')
-  return await response.json()
+export interface ServerDto {
+  id: number
+  ip: string
+  port: number
+  login: string
+  password: string
 }
 
-export const serverCreate = async (server: any) => {
+export type ServerPayload = Omit<ServerDto, 'id'>
+
+export const serversFetch = async (): Promise<ServerDto[]> => {
+  const response = await fetchApi('/api/servers')
+  return (await response.json()) as ServerDto[]
+}
+
+export const serverCreate = async (payload: ServerPayload): Promise<ServerDto> => {
   const response = await fetchApi('/api/servers', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
     },
-    body: server
+    body: JSON.stringify(payload),
   })
 
-  return await response.json();
+  return (await response.json()) as ServerDto
 }
 
-export const serverDelete = async (id: number) => {
+export const serverDelete = async (id: number): Promise<boolean> => {
   await fetchApi(`/api/servers/${id}`, {
-    method: 'DELETE'
+    method: 'DELETE',
   })
-  return true;
+  return true
 }
 
-export const serverUpdate = async (id: number, server: any) => {
+export const serverUpdate = async (id: number, payload: ServerPayload): Promise<ServerDto> => {
   const response = await fetchApi(`/api/servers/${id}`, {
     method: 'PUT',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
     },
-    body: JSON.stringify(server)
+    body: JSON.stringify(payload),
   })
-  return await response.json()
+  return (await response.json()) as ServerDto
 }

@@ -156,35 +156,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { serversFetch, serverCreate, serverDelete, serverUpdate } from '../api'
-
-interface Server {
-  id: number
-  ip: string
-  port: number
-  login: string
-  password: string
-}
+import type { ServerDto, ServerPayload } from '../api'
+import { notify } from '@/shared/notifications'
 
 const showAddServerModal = ref(false)
 const showEditServerModal = ref(false)
-const newServer = ref({
+const newServer = ref<ServerPayload>({
   ip: '',
   port: 22,
   login: '',
   password: ''
 })
-const editedServer = ref({ id: 0, ip: '', port: 22, login: '', password: '' })
+const editedServer = ref<ServerDto>({ id: 0, ip: '', port: 22, login: '', password: '' })
 
-const { data: servers } = useQuery({
+const { data: servers } = useQuery<ServerDto[]>({
   queryKey: ['servers'],
   queryFn: serversFetch,
 })
 
 const queryClient = useQueryClient()
-const { mutate: mutateServerCreate } = useMutation({
+const { mutate: mutateServerCreate } = useMutation<ServerDto, unknown, ServerPayload>({
   mutationFn: serverCreate,
   onSuccess: () => {
     showAddServerModal.value = false
@@ -193,7 +187,7 @@ const { mutate: mutateServerCreate } = useMutation({
 });
 
 const onServerCreate = () => {
-  mutateServerCreate(JSON.stringify(newServer.value))
+  mutateServerCreate({ ...newServer.value })
 }
 
 const { mutate: mutateServerDelete } = useMutation({
@@ -208,7 +202,7 @@ const onServerDelete = (id: number) => {
 }
 
 const { mutate: mutateServerUpdate } = useMutation({
-  mutationFn: ({ id, data }: { id: number; data: any }) => serverUpdate(id, data),
+  mutationFn: ({ id, data }: { id: number; data: ServerPayload }) => serverUpdate(id, data),
   onSuccess: () => {
     showEditServerModal.value = false
     queryClient.invalidateQueries({ queryKey: ['servers'] })
@@ -221,17 +215,24 @@ const editServer = (s: Server) => {
 }
 
 const onServerUpdate = () => {
-  mutateServerUpdate({ id: editedServer.value.id, data: editedServer.value })
+  mutateServerUpdate({
+    id: editedServer.value.id,
+    data: {
+      ip: editedServer.value.ip,
+      port: editedServer.value.port,
+      login: editedServer.value.login,
+      password: editedServer.value.password,
+    },
+  })
 }
 
 // Просмотр пользователей сервера
-const viewServerUsers = (server: Server) => {
-  // TODO: Реализовать просмотр пользователей сервера
+const viewServerUsers = (targetServer: ServerDto) => {
+  notify({
+    type: 'info',
+    message: `Просмотр пользователей сервера ${targetServer.ip}:${targetServer.port} пока недоступен`,
+  })
 }
-
-onMounted(() => {
-  serversFetch()
-})
 </script>
 
 <style scoped>
